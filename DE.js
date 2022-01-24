@@ -8,19 +8,18 @@ class DifferentialEquation {
      * Initialize a new differential equation for any order and number of dimensions.
      */
     constructor(dimensions, order) {
-        this.dimensions = +dimensions;
         this.dims = [];
         this.governingEquations = [];
         this.time = [];
-        for (let i = 0; i < dimensions; i++) {
+        for (let i = 0; i < +dimensions; i++) {
             this.dims[i] = new DifferentialEquationDimension(order);
         }
     }
     /**
-     * Set the `order-1` initial conditions for dimension `n` of this differential equation.
+     * Set the initial conditions of all lower order derivatives starting with the 0th derivative of dimension `n` of this differential equation using the values in the `initialConditions` array.
      */
     setInitialConditionsForNthDimension(n, initialConditions) {
-        if (n >= 0 && n < this.dimensions) {
+        if (n >= 0 && n < this.dims.length) {
             this.dims[n].setInitialConditions(initialConditions);
         } else {
             throw 'Dimension ' + n + ' does not exist.';
@@ -33,7 +32,7 @@ class DifferentialEquation {
      * `x, dx, ddx, ... y, dy, ddy, ...`
      */
     setGoverningEquationForNthDimension(n, f) {
-        if (typeof f === 'function' && n >= 0 && n < this.dimensions && !this.governingEquations[n]) {
+        if (typeof f === 'function' && n >= 0 && n < this.dims.length && !this.governingEquations[n]) {
             this.governingEquations[n] = f;
         } else {
             throw 'Failed to set governing equation ' + f + ' for dimension ' + n;
@@ -45,7 +44,7 @@ class DifferentialEquation {
      */
     #getGoverningEquationParameters() {
         let parameters = [];
-        for (let i = 0; i < this.dimensions; i++) {
+        for (let i = 0; i < this.dims.length; i++) {
             parameters.push(this.dims[i].getAllDerivativesForLatestTimeStep());
         }
         return parameters.flat();
@@ -55,7 +54,7 @@ class DifferentialEquation {
      */
     #validate() {
         let f, x;
-        for (let i = 0; i < this.dimensions; i++) {
+        for (let i = 0; i < this.dims.length; i++) {
             if (typeof this.dims[i].getNthDerivative(0)[0] !== 'number') {
                 throw 'Initial conditions not set for dimension ' + i;
             }
@@ -77,7 +76,7 @@ class DifferentialEquation {
         if (!this.#validate()) { return; }
         // Set highest order derivatives based on initial conditions
         let x = this.#getGoverningEquationParameters();
-        for (let i = 0; i < this.dimensions; i++) {
+        for (let i = 0; i < this.dims.length; i++) {
             const f = this.governingEquations[i];
             this.dims[i].setHighestOrderDerivative(f(t0, x));
         }
@@ -85,7 +84,7 @@ class DifferentialEquation {
         // Step through time and solve each timestep
         for (let t = t0 + dt; t <= tf; t += dt) {
             x = this.#getGoverningEquationParameters();
-            for (let i = 0; i < this.dimensions; i++) {
+            for (let i = 0; i < this.dims.length; i++) {
                 const f = this.governingEquations[i];
                 this.dims[i].solve(dt);
                 this.dims[i].setHighestOrderDerivative(f(t, x));
@@ -106,11 +105,11 @@ class DifferentialEquation {
         return this.time;
     }
     /**
-     * Clears computed data.
+     * Clears time array and computed data, including initial conditions. Does not clear governing equations.
      */
     clearData() {
         this.time = [];
-        for (let i = 0; i < this.dimensions; i++) {
+        for (let i = 0; i < this.dims.length; i++) {
             this.dims[i].clear();
         }
     }
